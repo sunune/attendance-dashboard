@@ -2,7 +2,7 @@ name: Update Attendance Data from Notion
 
 on:
   schedule:
-    - cron: '0 0 * * 1-5'   # KST 09:00 (UTC 00:00), 평일만
+    - cron: '0 * * * 1-5'   # 매시간 (평일)
   workflow_dispatch:          # 수동 실행 가능
 
 jobs:
