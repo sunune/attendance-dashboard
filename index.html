@@ -29,11 +29,47 @@ body {
   border-radius: 14px;
   padding: 18px 22px;
   border: 1px solid #e8e3da;
+  cursor: default;
+  transition: box-shadow 0.15s;
 }
+.card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
 .card.emp-card { border-top: 3px solid; }
 .card-label { font-size: 12px; color: #9a9aaa; margin-bottom: 8px; }
 .card-value { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
 .card-sub { font-size: 11px; color: #bbb; margin-top: 6px; }
+
+/* ── Card Tooltip ── */
+#card-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999;
+  display: none;
+  background: #fff;
+  border: 1px solid #e8e3da;
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.10);
+  min-width: 170px;
+}
+.tt-title { font-size: 11px; color: #9a9aaa; margin-bottom: 10px; }
+.tt-track {
+  position: relative;
+  height: 8px;
+  background: #f5f0e8;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.tt-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5px;
+  height: 14px;
+  top: -3px;
+  background: #ccc;
+}
+.tt-bar { position: absolute; height: 8px; border-radius: 4px; transition: none; }
+.tt-delta { font-size: 15px; font-weight: 700; }
 
 /* ── Filter Row ── */
 .filter-row {
@@ -78,7 +114,7 @@ body {
   display: flex;
   gap: 22px;
   flex-wrap: wrap;
-  margin-bottom: 4px;
+  margin-bottom: 14px;
 }
 .legend-item {
   display: flex;
@@ -92,19 +128,9 @@ body {
   height: 8px;
   border-radius: 3px;
 }
-.drag-hint {
-  font-size: 11px;
-  color: #c0bbb5;
-  margin-bottom: 10px;
-}
-#chart {
-  cursor: grab;
-  user-select: none;
-  display: block;
-}
-#chart.dragging { cursor: grabbing; }
+#chart { display: block; user-select: none; }
 
-/* ── Summary Table ── */
+/* ── Summary Table (3 columns) ── */
 .summary-table {
   background: #fff;
   border-radius: 14px;
@@ -113,7 +139,7 @@ body {
 }
 .tbl-header {
   display: grid;
-  grid-template-columns: 130px 130px 220px 1fr;
+  grid-template-columns: 130px 130px 1fr;
   padding: 12px 28px;
   font-size: 12px;
   color: #9a9aaa;
@@ -123,7 +149,7 @@ body {
 }
 .tbl-row {
   display: grid;
-  grid-template-columns: 130px 130px 220px 1fr;
+  grid-template-columns: 130px 130px 1fr;
   padding: 20px 28px;
   border-bottom: 1px solid #f2ede6;
   gap: 12px;
@@ -136,7 +162,7 @@ body {
 /* ── Leave Dots ── */
 .leave-wrap { display: flex; align-items: center; gap: 10px; }
 .leave-count { font-size: 14px; font-weight: 700; min-width: 44px; }
-.leave-dots { display: flex; flex-wrap: wrap; gap: 4px; max-width: 120px; }
+.leave-dots { display: flex; flex-wrap: wrap; gap: 4px; max-width: 180px; }
 .dot {
   width: 11px;
   height: 11px;
@@ -144,11 +170,7 @@ body {
   background: #ddd8d0;
 }
 
-/* ── Deviation Bar ── */
-.dev-wrap { display: flex; align-items: center; gap: 14px; }
-.dev-text { min-width: 100px; }
-.dev-delta { font-size: 13px; font-weight: 600; }
-.dev-sub { font-size: 11px; color: #aaa; margin-top: 1px; }
+/* ── Deviation Bar (shared: table + mobile) ── */
 .dev-track {
   flex: 1;
   height: 8px;
@@ -170,6 +192,45 @@ body {
   border-radius: 4px;
 }
 
+/* ── Mobile Summary (hidden on desktop) ── */
+.mobile-summary {
+  display: none;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e8e3da;
+  overflow: hidden;
+  margin-top: 20px;
+}
+.mob-row {
+  padding: 18px 20px;
+  border-bottom: 1px solid #f2ede6;
+  border-top: 3px solid transparent;
+}
+.mob-row:last-child { border-bottom: none; }
+.mob-name { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+.mob-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.mob-label { font-size: 11px; color: #9a9aaa; margin-bottom: 3px; }
+.mob-val { font-size: 14px; font-weight: 600; color: #1a1a2e; }
+.mob-dev-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.mob-dev-text { font-size: 14px; font-weight: 700; min-width: 54px; }
+.mob-dev-track {
+  flex: 1;
+  height: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 @media (max-width: 900px) {
   body { padding: 20px 16px; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
@@ -177,30 +238,40 @@ body {
     grid-template-columns: 90px 90px 1fr;
     font-size: 12px;
   }
-  .tbl-header span:last-child, .tbl-row .dev-wrap { display: none; }
+  .mobile-summary { display: block; }
 }
 </style>
 </head>
 <body>
 
+<!-- Card Tooltip -->
+<div id="card-tooltip">
+  <div class="tt-title">출근 편차</div>
+  <div class="tt-track">
+    <div class="tt-center"></div>
+    <div class="tt-bar" id="tt-bar"></div>
+  </div>
+  <div class="tt-delta" id="tt-delta"></div>
+</div>
+
 <!-- Metric Cards -->
 <div class="metrics">
-  <div class="card">
+  <div class="card" id="card-overall">
     <div class="card-label">전체 평균 출근</div>
     <div class="card-value" id="m-overall" style="color:#1a1a2e">—</div>
     <div class="card-sub">전체 직원 · 1년</div>
   </div>
-  <div class="card emp-card" style="border-top-color:#3266ad">
+  <div class="card emp-card" id="card-강성준" style="border-top-color:#3266ad">
     <div class="card-label">강성준 평균 출근</div>
     <div class="card-value" id="m-강성준" style="color:#3266ad">—</div>
     <div class="card-sub">2026 연간 평균</div>
   </div>
-  <div class="card emp-card" style="border-top-color:#D85A30">
+  <div class="card emp-card" id="card-이경희" style="border-top-color:#D85A30">
     <div class="card-label">이경희 평균 출근</div>
     <div class="card-value" id="m-이경희" style="color:#D85A30">—</div>
     <div class="card-sub">2026 연간 평균</div>
   </div>
-  <div class="card emp-card" style="border-top-color:#1D9E75">
+  <div class="card emp-card" id="card-임재우" style="border-top-color:#1D9E75">
     <div class="card-label">임재우 평균 출근</div>
     <div class="card-value" id="m-임재우" style="color:#1D9E75">—</div>
     <div class="card-sub">2026 연간 평균</div>
@@ -228,9 +299,11 @@ body {
 <!-- Chart -->
 <div class="chart-wrap">
   <div class="legend" id="legend"></div>
-  <div class="drag-hint">← 드래그로 확대/축소 →</div>
   <canvas id="chart"></canvas>
 </div>
+
+<!-- Mobile Deviation Summary (shown only on mobile) -->
+<div class="mobile-summary" id="mobile-summary"></div>
 
 <!-- Summary Table -->
 <div class="summary-table">
@@ -238,7 +311,6 @@ body {
     <span>직원</span>
     <span>평균 출근</span>
     <span>연차 (병가 제외)</span>
-    <span>9:30 기준 편차</span>
   </div>
   <div id="tbl-body"></div>
 </div>
@@ -292,14 +364,15 @@ function getWeekNum(dateStr) {
 }
 
 // ─── State ───────────────────────────────────────────────
-let allRecords  = makeDemoRecords();
-let isDemo      = true;  // data.json 로드 성공 시 false
+let allRecords   = makeDemoRecords();
+let isDemo       = true;
 let activePeriod = 'week';
 let activeEmp    = 'all';
-let viewOffset   = 0;  // pan offset (# of data points from the right end)
+let viewOffset   = 0;
+let viewWindow   = null; // null = use default window size
 let chartInst    = null;
 
-// ─── Load Data (data.json ← GitHub Actions가 Notion에서 생성) ──
+// ─── Load Data ───────────────────────────────────────────
 async function loadData() {
   try {
     const r = await fetch('./data.json?' + Date.now());
@@ -351,10 +424,15 @@ function aggregate() {
   });
 }
 
-function windowSize(total) {
-  if (activePeriod === 'day')   return Math.min(30, total);
-  if (activePeriod === 'week')  return Math.min(52, total);
+function defaultWindowSize(total) {
+  if (activePeriod === 'day')  return Math.min(30, total);
+  if (activePeriod === 'week') return Math.min(52, total);
   return Math.min(12, total);
+}
+
+function windowSize(total) {
+  if (viewWindow !== null) return Math.max(3, Math.min(total, viewWindow));
+  return defaultWindowSize(total);
 }
 
 function getSlice(agg) {
@@ -459,43 +537,98 @@ function renderChart() {
   createChart(slice);
 }
 
-// ─── Drag to Pan ─────────────────────────────────────────
-let isDragging = false, dragStartX = 0, dragStartOffset = 0;
-let cachedAgg = null;
+// ─── Mouse Wheel Zoom ─────────────────────────────────────
+document.getElementById('chart').addEventListener('wheel', e => {
+  e.preventDefault();
+  const agg   = aggregate();
+  const total = agg.length;
+  const current = windowSize(total);
+  // scroll up (deltaY < 0) = zoom in (fewer points)
+  // scroll down (deltaY > 0) = zoom out (more points)
+  const factor = e.deltaY > 0 ? 1.25 : 0.8;
+  viewWindow = Math.max(3, Math.min(total, Math.round(current * factor)));
+  renderChart();
+}, { passive: false });
 
-document.getElementById('chart').addEventListener('mousedown', e => {
-  isDragging = true;
-  dragStartX = e.clientX;
-  dragStartOffset = viewOffset;
-  cachedAgg = aggregate();
-  document.getElementById('chart').classList.add('dragging');
+// ─── Card Tooltip ─────────────────────────────────────────
+const cardTooltip = document.getElementById('card-tooltip');
+
+function empAvgMins() {
+  const empMins = {};
+  EMPLOYEES.forEach(e => empMins[e] = []);
+  const all = [];
+  allRecords.forEach(rec => {
+    rec.arrivals?.forEach(a => {
+      const m = toMins(a.time);
+      if (m != null) { all.push(m); empMins[a.name]?.push(m); }
+    });
+  });
+  const avg = a => a.length ? a.reduce((s,v)=>s+v,0)/a.length : null;
+  const result = { overall: avg(all) };
+  EMPLOYEES.forEach(e => { result[e] = avg(empMins[e]); });
+  return result;
+}
+
+function showCardTooltip(e, cardId) {
+  const avgs = empAvgMins();
+  let avgM, color;
+  if (cardId === 'card-overall') {
+    avgM  = avgs.overall;
+    color = '#1a1a2e';
+  } else {
+    const name = cardId.replace('card-', '');
+    avgM  = avgs[name];
+    color = COLORS[name];
+  }
+  if (avgM == null) return;
+
+  const dev    = Math.round(avgM - BASELINE);
+  const absDev = Math.abs(dev);
+  const MAX_DEV = 120;
+  const pct    = Math.min(absDev / MAX_DEV * 50, 50);
+  const devTxt = dev === 0 ? '0분' : dev < 0 ? `-${absDev}분` : `+${dev}분`;
+  const barColor = dev > 0 ? '#e85555' : color;
+
+  const bar = document.getElementById('tt-bar');
+  if (dev < 0) {
+    bar.style.right = '50%';
+    bar.style.left  = 'auto';
+    bar.style.width = pct + '%';
+  } else {
+    bar.style.left  = '50%';
+    bar.style.right = 'auto';
+    bar.style.width = pct + '%';
+  }
+  bar.style.background = barColor;
+
+  const delta = document.getElementById('tt-delta');
+  delta.textContent = devTxt;
+  delta.style.color = barColor;
+
+  cardTooltip.style.display = 'block';
+  posCardTooltip(e);
+}
+
+function posCardTooltip(e) {
+  const vpW = window.innerWidth, vpH = window.innerHeight;
+  const tw = cardTooltip.offsetWidth, th = cardTooltip.offsetHeight;
+  let x = e.clientX + 16, y = e.clientY - th / 2;
+  if (x + tw > vpW - 8) x = e.clientX - tw - 16;
+  if (y < 8) y = 8;
+  if (y + th > vpH - 8) y = vpH - th - 8;
+  cardTooltip.style.left = x + 'px';
+  cardTooltip.style.top  = y + 'px';
+}
+
+['card-overall', 'card-강성준', 'card-이경희', 'card-임재우'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('mouseenter', e => showCardTooltip(e, id));
+  el.addEventListener('mousemove',  e => posCardTooltip(e));
+  el.addEventListener('mouseleave', () => { cardTooltip.style.display = 'none'; });
 });
 
-document.addEventListener('mousemove', e => {
-  if (!isDragging || !chartInst || !cachedAgg) return;
-  const canvas = document.getElementById('chart');
-  const agg    = cachedAgg;
-  const total  = agg.length;
-  const wSize  = windowSize(total);
-  const delta  = e.clientX - dragStartX;
-  const pct    = delta / canvas.clientWidth;
-  const shift  = Math.round(pct * wSize * 0.8);
-  viewOffset   = Math.max(0, Math.min(dragStartOffset - shift, Math.max(0, total - wSize)));
-
-  const slice = getSlice(agg);
-  chartInst.data.labels = slice.map(p => p.label);
-  const visible = activeEmp === 'all' ? EMPLOYEES : [activeEmp];
-  chartInst.data.datasets.forEach((ds, i) => { ds.data = slice.map(p => p[visible[i]]); });
-  chartInst.update('none');
-});
-
-document.addEventListener('mouseup', () => {
-  isDragging = false;
-  cachedAgg  = null;
-  document.getElementById('chart').classList.remove('dragging');
-});
-
-// ─── Table ───────────────────────────────────────────────
+// ─── Table (3 columns: 직원 / 평균출근 / 연차) ──────────────
 function renderTable() {
   const empData = {};
   EMPLOYEES.forEach(e => empData[e] = { mins: [], leave: 0 });
@@ -506,32 +639,11 @@ function renderTable() {
   if (isDemo) { empData['강성준'].leave = 10; empData['이경희'].leave = 6; empData['임재우'].leave = 13; }
 
   const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
-  const MAX_DEV = 120; // minutes
 
   document.getElementById('tbl-body').innerHTML = EMPLOYEES.map(name => {
     const d = empData[name];
     const avgM = avg(d.mins);
-    const dev  = avgM != null ? Math.round(avgM - BASELINE) : null;
-    const absDev = dev != null ? Math.abs(dev) : 0;
 
-    // Deviation text
-    let devTxt;
-    if (dev == null) devTxt = '—';
-    else if (dev === 0) devTxt = '-0분';
-    else if (dev < 0) devTxt = absDev >= 60 ? `-${Math.floor(absDev/60)}시간 ${absDev%60}분` : `-${absDev}분`;
-    else devTxt = `+${dev}분`;
-    const devLbl  = dev == null ? '' : dev <= 0 ? '일찍 출근' : '지각';
-    const devColor = dev != null && dev > 0 ? '#e85555' : COLORS[name];
-
-    // Bar
-    const barPct = Math.min(absDev / MAX_DEV * 50, 50);
-    const barStyle = dev != null && dev < 0
-      ? `right:50%; width:${barPct}%; background:${COLORS[name]};`
-      : dev != null && dev > 0
-      ? `left:50%;  width:${barPct}%; background:#e85555;`
-      : `left:50%;  width:0;`;
-
-    // Dots
     const dots = Array.from({ length: TOTAL_LEAVE }, (_, i) =>
       `<div class="dot" style="${i < d.leave ? `background:${COLORS[name]}` : ''}"></div>`
     ).join('');
@@ -544,12 +656,58 @@ function renderTable() {
           <span class="leave-count" style="color:${COLORS[name]}">${d.leave}/${TOTAL_LEAVE}</span>
           <div class="leave-dots">${dots}</div>
         </div>
-        <div class="dev-wrap">
-          <div class="dev-text">
-            <div class="dev-delta" style="color:${devColor}">${devTxt}</div>
-            <div class="dev-sub">${devLbl}</div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Mobile Summary ───────────────────────────────────────
+function renderMobileSummary() {
+  const empData = {};
+  EMPLOYEES.forEach(e => empData[e] = { mins: [], leave: 0 });
+  allRecords.forEach(rec => {
+    rec.arrivals?.forEach(a => { const m = toMins(a.time); if (m!=null) empData[a.name]?.mins.push(m); });
+    rec.absences?.forEach(a => { if (a.type === '연차') empData[a.name].leave++; });
+  });
+  if (isDemo) { empData['강성준'].leave = 10; empData['이경희'].leave = 6; empData['임재우'].leave = 13; }
+
+  const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+  const MAX_DEV = 120;
+
+  document.getElementById('mobile-summary').innerHTML = EMPLOYEES.map(name => {
+    const d = empData[name];
+    const avgM = avg(d.mins);
+    const dev = avgM != null ? Math.round(avgM - BASELINE) : null;
+    const absDev = dev != null ? Math.abs(dev) : 0;
+    const devTxt = dev == null ? '—' : dev === 0 ? '0분' : dev < 0 ? `-${absDev}분` : `+${dev}분`;
+    const devColor = dev != null && dev > 0 ? '#e85555' : COLORS[name];
+    const barPct = Math.min(absDev / MAX_DEV * 50, 50);
+
+    let barStyle;
+    if (dev != null && dev < 0) {
+      barStyle = `right:50%; left:auto; width:${barPct}%; background:${COLORS[name]};`;
+    } else if (dev != null && dev > 0) {
+      barStyle = `left:50%; right:auto; width:${barPct}%; background:#e85555;`;
+    } else {
+      barStyle = `left:50%; width:0;`;
+    }
+
+    return `
+      <div class="mob-row" style="border-top-color:${COLORS[name]}">
+        <div class="mob-name" style="color:${COLORS[name]}">${name}</div>
+        <div class="mob-stats">
+          <div>
+            <div class="mob-label">평균 출근</div>
+            <div class="mob-val">${fmtMins(avgM)}</div>
           </div>
-          <div class="dev-track">
+          <div>
+            <div class="mob-label">연차 (병가 제외)</div>
+            <div class="mob-val" style="color:${COLORS[name]}">${d.leave}/${TOTAL_LEAVE}</div>
+          </div>
+        </div>
+        <div class="mob-label" style="margin-bottom:6px">출근 편차</div>
+        <div class="mob-dev-row">
+          <span class="mob-dev-text" style="color:${devColor}">${devTxt}</span>
+          <div class="mob-dev-track">
             <div class="dev-center-line"></div>
             <div class="dev-bar" style="${barStyle}"></div>
           </div>
@@ -565,6 +723,7 @@ document.getElementById('period-btns').addEventListener('click', e => {
   btn.classList.add('active');
   activePeriod = btn.dataset.period;
   viewOffset = 0;
+  viewWindow = null;
   renderChart(); renderLegend();
 });
 
@@ -577,7 +736,7 @@ document.getElementById('emp-btns').addEventListener('click', e => {
 });
 
 // ─── Init ────────────────────────────────────────────────
-function renderAll() { renderMetrics(); renderLegend(); renderChart(); renderTable(); }
+function renderAll() { renderMetrics(); renderLegend(); renderChart(); renderTable(); renderMobileSummary(); }
 loadData();
 </script>
 </body>
