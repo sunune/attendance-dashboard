@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>출근 현황 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  background: #f5f0e8;
+  color: #1a1a2e;
+  min-height: 100vh;
+  padding: 36px 44px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── Metric Cards ── */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 22px;
+  border: 1px solid #e8e3da;
+}
+.card.emp-card { border-top: 3px solid; }
+.card-label { font-size: 12px; color: #9a9aaa; margin-bottom: 8px; }
+.card-value { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+.card-sub { font-size: 11px; color: #bbb; margin-top: 6px; }
+
+/* ── Filter Row ── */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.filter-label { font-size: 13px; color: #9a9aaa; white-space: nowrap; }
+.filter-group { display: flex; gap: 6px; }
+.btn {
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: 1px solid #ddd8d0;
+  background: transparent;
+  color: #6a6a7a;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn:hover { border-color: #bbb; color: #1a1a2e; }
+.btn.active {
+  background: #1a1a2e;
+  border-color: #1a1a2e;
+  color: #fff;
+  font-weight: 500;
+}
+.divider-v { width: 1px; height: 22px; background: #ddd8d0; margin: 0 2px; }
+
+/* ── Chart Container ── */
+.chart-wrap {
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px 26px 20px;
+  border: 1px solid #e8e3da;
+  margin-bottom: 20px;
+}
+.legend {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #5a5a6a;
+}
+.legend-sq {
+  width: 14px;
+  height: 8px;
+  border-radius: 3px;
+}
+.drag-hint {
+  font-size: 11px;
+  color: #c0bbb5;
+  margin-bottom: 10px;
+}
+#chart {
+  cursor: grab;
+  user-select: none;
+  display: block;
+}
+#chart.dragging { cursor: grabbing; }
+
+/* ── Summary Table ── */
+.summary-table {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e8e3da;
+  overflow: hidden;
+}
+.tbl-header {
+  display: grid;
+  grid-template-columns: 130px 130px 220px 1fr;
+  padding: 12px 28px;
+  font-size: 12px;
+  color: #9a9aaa;
+  border-bottom: 1px solid #ede8e0;
+  gap: 12px;
+  align-items: center;
+}
+.tbl-row {
+  display: grid;
+  grid-template-columns: 130px 130px 220px 1fr;
+  padding: 20px 28px;
+  border-bottom: 1px solid #f2ede6;
+  gap: 12px;
+  align-items: center;
+}
+.tbl-row:last-child { border-bottom: none; }
+.emp-name { font-size: 15px; font-weight: 600; }
+.avg-time { font-size: 14px; color: #2a2a3e; }
+
+/* ── Leave Dots ── */
+.leave-wrap { display: flex; align-items: center; gap: 10px; }
+.leave-count { font-size: 14px; font-weight: 700; min-width: 44px; }
+.leave-dots { display: flex; flex-wrap: wrap; gap: 4px; max-width: 120px; }
+.dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ddd8d0;
+}
+
+/* ── Deviation Bar ── */
+.dev-wrap { display: flex; align-items: center; gap: 14px; }
+.dev-text { min-width: 100px; }
+.dev-delta { font-size: 13px; font-weight: 600; }
+.dev-sub { font-size: 11px; color: #aaa; margin-top: 1px; }
+.dev-track {
+  flex: 1;
+  height: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.dev-center-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.5px;
+  height: 14px;
+  background: #ccc;
+}
+.dev-bar {
+  position: absolute;
+  height: 8px;
+  border-radius: 4px;
+}
+
+@media (max-width: 900px) {
+  body { padding: 20px 16px; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .tbl-header, .tbl-row {
+    grid-template-columns: 90px 90px 1fr;
+    font-size: 12px;
+  }
+  .tbl-header span:last-child, .tbl-row .dev-wrap { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Metric Cards -->
+<div class="metrics">
+  <div class="card">
+    <div class="card-label">전체 평균 출근</div>
+    <div class="card-value" id="m-overall" style="color:#1a1a2e">—</div>
+    <div class="card-sub">전체 직원 · 1년</div>
+  </div>
+  <div class="card emp-card" style="border-top-color:#3266ad">
+    <div class="card-label">강성준 평균 출근</div>
+    <div class="card-value" id="m-강성준" style="color:#3266ad">—</div>
+    <div class="card-sub">2026 연간 평균</div>
+  </div>
+  <div class="card emp-card" style="border-top-color:#D85A30">
+    <div class="card-label">이경희 평균 출근</div>
+    <div class="card-value" id="m-이경희" style="color:#D85A30">—</div>
+    <div class="card-sub">2026 연간 평균</div>
+  </div>
+  <div class="card emp-card" style="border-top-color:#1D9E75">
+    <div class="card-label">임재우 평균 출근</div>
+    <div class="card-value" id="m-임재우" style="color:#1D9E75">—</div>
+    <div class="card-sub">2026 연간 평균</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-row">
+  <span class="filter-label">기간</span>
+  <div class="filter-group" id="period-btns">
+    <button class="btn" data-period="day">일</button>
+    <button class="btn active" data-period="week">주</button>
+    <button class="btn" data-period="month">월</button>
+  </div>
+  <div class="divider-v"></div>
+  <span class="filter-label">직원</span>
+  <div class="filter-group" id="emp-btns">
+    <button class="btn active" data-emp="all">전체</button>
+    <button class="btn" data-emp="강성준">강성준</button>
+    <button class="btn" data-emp="이경희">이경희</button>
+    <button class="btn" data-emp="임재우">임재우</button>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="chart-wrap">
+  <div class="legend" id="legend"></div>
+  <div class="drag-hint">← 드래그로 확대/축소 →</div>
+  <canvas id="chart"></canvas>
+</div>
+
+<!-- Summary Table -->
+<div class="summary-table">
+  <div class="tbl-header">
+    <span>직원</span>
+    <span>평균 출근</span>
+    <span>연차 (병가 제외)</span>
+    <span>9:30 기준 편차</span>
+  </div>
+  <div id="tbl-body"></div>
+</div>
+
+<script>
+// ─── Constants ───────────────────────────────────────────
+const EMPLOYEES = ['강성준', '이경희', '임재우'];
+const COLORS    = { '강성준': '#3266ad', '이경희': '#D85A30', '임재우': '#1D9E75' };
+const BASELINE  = 9 * 60 + 30; // 09:30 in minutes
+const TOTAL_LEAVE = 15;
+
+// ─── Demo Data ───────────────────────────────────────────
+function makeDemoRecords() {
+  const base = { '강성준': 7*60+58, '이경희': 9*60+30, '임재우': 9*60+15 };
+  const vari = { '강성준': 18,       '이경희': 18,       '임재우': 20       };
+  const records = [];
+  const end = new Date('2026-03-22');
+  const start = new Date('2026-01-01');
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue;
+    const dateStr = d.toISOString().split('T')[0];
+    const arrivals = EMPLOYEES.map(name => {
+      if (Math.random() < 0.04) return null;
+      const mins = base[name] + Math.round((Math.random() - 0.5) * vari[name] * 2);
+      const h = Math.floor(mins / 60), m = ((mins % 60) + 60) % 60;
+      return { name, time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` };
+    }).filter(Boolean);
+    if (arrivals.length) records.push({ date: dateStr, arrivals });
+  }
+  return records;
+}
+
+// ─── Helpers ─────────────────────────────────────────────
+function toMins(t) {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+function fmtMins(mins) {
+  if (mins == null || isNaN(mins)) return '—';
+  const h = Math.floor(mins / 60), m = Math.round(mins % 60);
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const hh = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${ampm} ${String(hh).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function getWeekNum(dateStr) {
+  const d = new Date(dateStr);
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+}
+
+// ─── State ───────────────────────────────────────────────
+let allRecords  = makeDemoRecords();
+let isDemo      = true;
+let activePeriod = 'week';
+let activeEmp    = 'all';
+let viewOffset   = 0;  // pan offset (# of data points from the right end)
+let chartInst    = null;
+
+// ─── Load Data ───────────────────────────────────────────
+async function loadData() {
+  try {
+    const r = await fetch('./attendance.json?' + Date.now());
+    if (r.ok) {
+      const d = await r.json();
+      if (d.records && d.records.length > 0) { allRecords = d.records; isDemo = false; }
+    }
+  } catch(e) {}
+  renderAll();
+}
+
+// ─── Aggregate ───────────────────────────────────────────
+function aggregate() {
+  if (activePeriod === 'day') {
+    return allRecords.map(rec => {
+      const pt = { label: rec.date.slice(5) };
+      EMPLOYEES.forEach(n => {
+        const a = rec.arrivals?.find(x => x.name === n);
+        pt[n] = a ? toMins(a.time) : null;
+      });
+      return pt;
+    });
+  }
+  const buckets = {};
+  allRecords.forEach(rec => {
+    let key;
+    if (activePeriod === 'week') {
+      const d = new Date(rec.date);
+      key = `${d.getFullYear()}-W${String(getWeekNum(rec.date)).padStart(2,'0')}`;
+    } else {
+      key = rec.date.slice(0, 7);
+    }
+    if (!buckets[key]) buckets[key] = { label: key, s: {}, c: {} };
+    EMPLOYEES.forEach(n => {
+      const a = rec.arrivals?.find(x => x.name === n);
+      if (a) {
+        const m = toMins(a.time);
+        if (m != null) { buckets[key].s[n] = (buckets[key].s[n] || 0) + m; buckets[key].c[n] = (buckets[key].c[n] || 0) + 1; }
+      }
+    });
+  });
+  return Object.values(buckets).map(b => {
+    const pt = { label: b.label };
+    EMPLOYEES.forEach(n => { pt[n] = b.c[n] ? b.s[n] / b.c[n] : null; });
+    return pt;
+  });
+}
+
+function windowSize(total) {
+  if (activePeriod === 'day')   return Math.min(30, total);
+  if (activePeriod === 'week')  return Math.min(52, total);
+  return Math.min(12, total);
+}
+
+function getSlice(agg) {
+  const total = agg.length;
+  const wSize  = windowSize(total);
+  const maxOff = Math.max(0, total - wSize);
+  viewOffset   = Math.max(0, Math.min(viewOffset, maxOff));
+  const start  = total - wSize - viewOffset;
+  return agg.slice(Math.max(0, start), start + wSize);
+}
+
+// ─── Metrics ─────────────────────────────────────────────
+function renderMetrics() {
+  const empMins = {}; const all = [];
+  EMPLOYEES.forEach(e => empMins[e] = []);
+  allRecords.forEach(rec => {
+    rec.arrivals?.forEach(a => {
+      const m = toMins(a.time);
+      if (m != null) { all.push(m); empMins[a.name]?.push(m); }
+    });
+  });
+  const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+  document.getElementById('m-overall').textContent = fmtMins(avg(all));
+  EMPLOYEES.forEach(e => { document.getElementById('m-'+e).textContent = fmtMins(avg(empMins[e])); });
+}
+
+// ─── Legend ──────────────────────────────────────────────
+function renderLegend() {
+  const empMins = {};
+  EMPLOYEES.forEach(e => empMins[e] = []);
+  allRecords.forEach(rec => rec.arrivals?.forEach(a => {
+    const m = toMins(a.time); if (m!=null) empMins[a.name]?.push(m);
+  }));
+  const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+  const visible = activeEmp === 'all' ? EMPLOYEES : [activeEmp];
+  document.getElementById('legend').innerHTML = visible.map(e =>
+    `<div class="legend-item">
+      <div class="legend-sq" style="background:${COLORS[e]}"></div>
+      <span>${e} · 평균 ${fmtMins(avg(empMins[e]))}</span>
+    </div>`).join('');
+}
+
+// ─── Chart ───────────────────────────────────────────────
+function buildDatasets(slice) {
+  const visible = activeEmp === 'all' ? EMPLOYEES : [activeEmp];
+  return visible.map(name => ({
+    label: name,
+    data: slice.map(p => p[name]),
+    borderColor: COLORS[name],
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    pointRadius: 0,
+    pointHoverRadius: 0,
+    spanGaps: true,
+    tension: 0.35,
+  }));
+}
+
+function createChart(slice) {
+  const ctx = document.getElementById('chart').getContext('2d');
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(ctx, {
+    type: 'line',
+    data: { labels: slice.map(p => p.label), datasets: buildDatasets(slice) },
+    options: {
+      responsive: true,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          borderColor: '#e8e3da',
+          borderWidth: 1,
+          titleColor: '#9a9aaa',
+          bodyColor: '#1a1a2e',
+          padding: 10,
+          callbacks: { label: c => ` ${c.dataset.label}: ${fmtMins(c.raw)}` }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#f0ebe3' },
+          ticks: { color: '#bbb', font: { size: 11 }, maxTicksLimit: 13, maxRotation: 0 }
+        },
+        y: {
+          grid: { color: '#f0ebe3' },
+          min: 7 * 60, max: 11 * 60 + 30,
+          ticks: {
+            color: '#bbb', font: { size: 11 }, stepSize: 30,
+            callback: v => fmtMins(v)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderChart() {
+  const agg   = aggregate();
+  const slice = getSlice(agg);
+  createChart(slice);
+}
+
+// ─── Drag to Pan ─────────────────────────────────────────
+let isDragging = false, dragStartX = 0, dragStartOffset = 0;
+let cachedAgg = null;
+
+document.getElementById('chart').addEventListener('mousedown', e => {
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartOffset = viewOffset;
+  cachedAgg = aggregate();
+  document.getElementById('chart').classList.add('dragging');
+});
+
+document.addEventListener('mousemove', e => {
+  if (!isDragging || !chartInst || !cachedAgg) return;
+  const canvas = document.getElementById('chart');
+  const agg    = cachedAgg;
+  const total  = agg.length;
+  const wSize  = windowSize(total);
+  const delta  = e.clientX - dragStartX;
+  const pct    = delta / canvas.clientWidth;
+  const shift  = Math.round(pct * wSize * 0.8);
+  viewOffset   = Math.max(0, Math.min(dragStartOffset - shift, Math.max(0, total - wSize)));
+
+  const slice = getSlice(agg);
+  chartInst.data.labels = slice.map(p => p.label);
+  const visible = activeEmp === 'all' ? EMPLOYEES : [activeEmp];
+  chartInst.data.datasets.forEach((ds, i) => { ds.data = slice.map(p => p[visible[i]]); });
+  chartInst.update('none');
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  cachedAgg  = null;
+  document.getElementById('chart').classList.remove('dragging');
+});
+
+// ─── Table ───────────────────────────────────────────────
+function renderTable() {
+  const empData = {};
+  EMPLOYEES.forEach(e => empData[e] = { mins: [], leave: 0 });
+  allRecords.forEach(rec => {
+    rec.arrivals?.forEach(a => { const m = toMins(a.time); if (m!=null) empData[a.name]?.mins.push(m); });
+    rec.absences?.forEach(a => { if (a.type === '연차') empData[a.name].leave++; });
+  });
+  if (isDemo) { empData['강성준'].leave = 10; empData['이경희'].leave = 6; empData['임재우'].leave = 13; }
+
+  const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+  const MAX_DEV = 120; // minutes
+
+  document.getElementById('tbl-body').innerHTML = EMPLOYEES.map(name => {
+    const d = empData[name];
+    const avgM = avg(d.mins);
+    const dev  = avgM != null ? Math.round(avgM - BASELINE) : null;
+    const absDev = dev != null ? Math.abs(dev) : 0;
+
+    // Deviation text
+    let devTxt;
+    if (dev == null) devTxt = '—';
+    else if (dev === 0) devTxt = '-0분';
+    else if (dev < 0) devTxt = absDev >= 60 ? `-${Math.floor(absDev/60)}시간 ${absDev%60}분` : `-${absDev}분`;
+    else devTxt = `+${dev}분`;
+    const devLbl  = dev == null ? '' : dev <= 0 ? '일찍 출근' : '지각';
+    const devColor = dev != null && dev > 0 ? '#e85555' : COLORS[name];
+
+    // Bar
+    const barPct = Math.min(absDev / MAX_DEV * 50, 50);
+    const barStyle = dev != null && dev < 0
+      ? `right:50%; width:${barPct}%; background:${COLORS[name]};`
+      : dev != null && dev > 0
+      ? `left:50%;  width:${barPct}%; background:#e85555;`
+      : `left:50%;  width:0;`;
+
+    // Dots
+    const dots = Array.from({ length: TOTAL_LEAVE }, (_, i) =>
+      `<div class="dot" style="${i < d.leave ? `background:${COLORS[name]}` : ''}"></div>`
+    ).join('');
+
+    return `
+      <div class="tbl-row">
+        <div class="emp-name" style="color:${COLORS[name]}">${name}</div>
+        <div class="avg-time">${fmtMins(avgM)}</div>
+        <div class="leave-wrap">
+          <span class="leave-count" style="color:${COLORS[name]}">${d.leave}/${TOTAL_LEAVE}</span>
+          <div class="leave-dots">${dots}</div>
+        </div>
+        <div class="dev-wrap">
+          <div class="dev-text">
+            <div class="dev-delta" style="color:${devColor}">${devTxt}</div>
+            <div class="dev-sub">${devLbl}</div>
+          </div>
+          <div class="dev-track">
+            <div class="dev-center-line"></div>
+            <div class="dev-bar" style="${barStyle}"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Filter Events ────────────────────────────────────────
+document.getElementById('period-btns').addEventListener('click', e => {
+  const btn = e.target.closest('.btn'); if (!btn) return;
+  document.querySelectorAll('#period-btns .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activePeriod = btn.dataset.period;
+  viewOffset = 0;
+  renderChart(); renderLegend();
+});
+
+document.getElementById('emp-btns').addEventListener('click', e => {
+  const btn = e.target.closest('.btn'); if (!btn) return;
+  document.querySelectorAll('#emp-btns .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeEmp = btn.dataset.emp;
+  renderChart(); renderLegend();
+});
+
+// ─── Init ────────────────────────────────────────────────
+function renderAll() { renderMetrics(); renderLegend(); renderChart(); renderTable(); }
+loadData();
+</script>
+</body>
+</html>
