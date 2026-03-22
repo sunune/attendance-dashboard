@@ -293,19 +293,22 @@ function getWeekNum(dateStr) {
 
 // ─── State ───────────────────────────────────────────────
 let allRecords  = makeDemoRecords();
-let isDemo      = true;
+let isDemo      = true;  // data.json 로드 성공 시 false
 let activePeriod = 'week';
 let activeEmp    = 'all';
 let viewOffset   = 0;  // pan offset (# of data points from the right end)
 let chartInst    = null;
 
-// ─── Load Data ───────────────────────────────────────────
+// ─── Load Data (data.json ← GitHub Actions가 Notion에서 생성) ──
 async function loadData() {
   try {
-    const r = await fetch('./attendance.json?' + Date.now());
+    const r = await fetch('./data.json?' + Date.now());
     if (r.ok) {
       const d = await r.json();
-      if (d.records && d.records.length > 0) { allRecords = d.records; isDemo = false; }
+      if (d.records && d.records.length > 0) {
+        allRecords = d.records;
+        isDemo = false;
+      }
     }
   } catch(e) {}
   renderAll();
