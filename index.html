@@ -375,12 +375,17 @@ let yMin = 7 * 60;   // 07:00 default floor (adjustable via Y-wheel)
 let yMaxCache = 0;   // computed from data on each renderChart()
 
 // ─── Load Data ───────────────────────────────────────────
+function isWeekday(dateStr) {
+  const dow = new Date(dateStr).getDay();
+  return dow !== 0 && dow !== 6;
+}
+
 async function loadData() {
   try {
     const r = await fetch('./data.json?' + Date.now());
     if (r.ok) {
       const d = await r.json();
-      if (d.records) allRecords = d.records;
+      if (d.records) allRecords = d.records.filter(rec => isWeekday(rec.date));
     }
   } catch(e) {}
   renderAll();
