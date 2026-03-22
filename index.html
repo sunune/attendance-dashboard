@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>출근 현황 대시보드</title>
+<title>latecomer</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,8 +76,9 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 22px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .filter-label { font-size: 13px; color: #9a9aaa; white-space: nowrap; }
 .filter-group { display: flex; gap: 6px; }
@@ -139,7 +140,7 @@ body {
 }
 .tbl-header {
   display: grid;
-  grid-template-columns: 130px 130px 200px 1fr;
+  grid-template-columns: 130px 130px 1fr 1fr;
   padding: 12px 28px;
   font-size: 12px;
   color: #9a9aaa;
@@ -149,7 +150,7 @@ body {
 }
 .tbl-row {
   display: grid;
-  grid-template-columns: 130px 130px 200px 1fr;
+  grid-template-columns: 130px 130px 1fr 1fr;
   padding: 20px 28px;
   border-bottom: 1px solid #f2ede6;
   gap: 12px;
@@ -162,7 +163,7 @@ body {
 /* ── Leave Dots ── */
 .leave-wrap { display: flex; align-items: center; gap: 10px; }
 .leave-count { font-size: 14px; font-weight: 700; min-width: 44px; }
-.leave-dots { display: flex; flex-wrap: wrap; gap: 4px; max-width: 180px; }
+.leave-dots { display: flex; flex-wrap: wrap; gap: 4px; }
 .dot {
   width: 11px;
   height: 11px;
@@ -170,18 +171,18 @@ body {
   background: #ddd8d0;
 }
 
-/* ── Deviation Bar (table + mobile) ── */
+/* ── Deviation Bar ── */
 .dev-wrap { display: flex; align-items: center; gap: 14px; }
 .dev-text { min-width: 56px; }
 .dev-delta { font-size: 13px; font-weight: 600; }
-
-/* ── Deviation Bar (shared: table + mobile) ── */
 .dev-track {
   flex: 1;
   height: 8px;
   position: relative;
   display: flex;
   align-items: center;
+  background: #ddd8d0;
+  border-radius: 4px;
 }
 .dev-center-line {
   position: absolute;
@@ -189,61 +190,21 @@ body {
   transform: translateX(-50%);
   width: 1.5px;
   height: 14px;
-  background: #ccc;
+  background: #aaa;
+  border-radius: 0;
 }
 .dev-bar {
   position: absolute;
   height: 8px;
-  border-radius: 4px;
-}
-
-/* ── Mobile Summary (hidden on desktop) ── */
-.mobile-summary {
-  display: none;
-  background: #fff;
-  border-radius: 14px;
-  border: 1px solid #e8e3da;
-  overflow: hidden;
-  margin-top: 20px;
-}
-.mob-row {
-  padding: 18px 20px;
-  border-bottom: 1px solid #f2ede6;
-  border-top: 3px solid transparent;
-}
-.mob-row:last-child { border-bottom: none; }
-.mob-name { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
-.mob-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.mob-label { font-size: 11px; color: #9a9aaa; margin-bottom: 3px; }
-.mob-val { font-size: 14px; font-weight: 600; color: #1a1a2e; }
-.mob-dev-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 4px;
-}
-.mob-dev-text { font-size: 14px; font-weight: 700; min-width: 54px; }
-.mob-dev-track {
-  flex: 1;
-  height: 8px;
-  position: relative;
-  display: flex;
-  align-items: center;
 }
 
 @media (max-width: 900px) {
   body { padding: 20px 16px; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .tbl-header, .tbl-row {
-    grid-template-columns: 80px 100px 140px 1fr;
+    grid-template-columns: 80px 120px 140px 1fr;
     font-size: 12px;
   }
-  .mobile-summary { display: block; }
 }
 </style>
 </head>
@@ -283,39 +244,41 @@ body {
   </div>
 </div>
 
-<!-- Filters -->
-<div class="filter-row">
-  <span class="filter-label">기간</span>
-  <div class="filter-group" id="period-btns">
-    <button class="btn" data-period="day">일</button>
-    <button class="btn active" data-period="week">주</button>
-    <button class="btn" data-period="month">월</button>
-  </div>
-  <div class="divider-v"></div>
-  <span class="filter-label">직원</span>
-  <div class="filter-group" id="emp-btns">
-    <button class="btn active" data-emp="all">전체</button>
-    <button class="btn" data-emp="강성준">강성준</button>
-    <button class="btn" data-emp="이경희">이경희</button>
-    <button class="btn" data-emp="임재우">임재우</button>
-  </div>
-</div>
+<!-- Filters & Chart-->
+<div style="display:flex; gap:8px; flex-direction:column;">
 
-<!-- Chart -->
-<div class="chart-wrap">
-  <div class="legend" id="legend"></div>
-  <canvas id="chart"></canvas>
-</div>
+  <!-- Filters -->
+  <div class="filter-row">
+    <span class="filter-label">기간</span>
+    <div class="filter-group" id="period-btns">
+      <button class="btn" data-period="day">일</button>
+      <button class="btn active" data-period="week">주</button>
+      <button class="btn" data-period="month">월</button>
+    </div>
+    <div class="divider-v"></div>
+    <span class="filter-label">직원</span>
+    <div class="filter-group" id="emp-btns">
+      <button class="btn active" data-emp="all">전체</button>
+      <button class="btn" data-emp="강성준">강성준</button>
+      <button class="btn" data-emp="이경희">이경희</button>
+      <button class="btn" data-emp="임재우">임재우</button>
+    </div>
+  </div>
 
-<!-- Mobile Deviation Summary (shown only on mobile) -->
-<div class="mobile-summary" id="mobile-summary"></div>
+  <!-- Chart -->
+  <div class="chart-wrap">
+    <div class="legend" id="legend"></div>
+    <canvas id="chart"></canvas>
+  </div>
+
+</div>
 
 <!-- Summary Table -->
 <div class="summary-table">
   <div class="tbl-header">
     <span>직원</span>
-    <span>평균 출근</span>
     <span>연차 (병가 제외)</span>
+    <span>평균 출근</span>
     <span>출근 편차</span>
   </div>
   <div id="tbl-body"></div>
@@ -377,6 +340,8 @@ let activeEmp    = 'all';
 let viewOffset   = 0;
 let viewWindow   = null; // null = use default window size
 let chartInst    = null;
+const Y_MAX = 15 * 60;  // 15:00 fixed ceiling
+let yMin = 7 * 60;      // 07:00 default floor (adjustable via Y-wheel)
 
 // ─── Load Data ───────────────────────────────────────────
 async function loadData() {
@@ -526,9 +491,10 @@ function createChart(slice) {
         },
         y: {
           grid: { color: '#f0ebe3' },
-          min: 7 * 60, max: 11 * 60 + 30,
+          min: yMin, max: Y_MAX,
           ticks: {
-            color: '#bbb', font: { size: 11 }, stepSize: 30,
+            color: '#bbb', font: { size: 11 },
+            stepSize: (Y_MAX - yMin) <= 120 ? 10 : (Y_MAX - yMin) <= 300 ? 20 : 30,
             callback: v => fmtMins(v)
           }
         }
@@ -546,13 +512,22 @@ function renderChart() {
 // ─── Mouse Wheel Zoom ─────────────────────────────────────
 document.getElementById('chart').addEventListener('wheel', e => {
   e.preventDefault();
-  const agg   = aggregate();
-  const total = agg.length;
-  const current = windowSize(total);
-  // scroll up (deltaY < 0) = zoom in (fewer points)
-  // scroll down (deltaY > 0) = zoom out (more points)
-  const factor = e.deltaY > 0 ? 1.25 : 0.8;
-  viewWindow = Math.max(3, Math.min(total, Math.round(current * factor)));
+  const inYAxis = chartInst && e.offsetX < chartInst.chartArea.left;
+
+  if (inYAxis) {
+    // Y-axis zoom: scroll up = zoom in (narrow range), scroll down = zoom out (wider range)
+    const range = Y_MAX - yMin;
+    const factor = e.deltaY > 0 ? 1.08 : 0.92;
+    const newRange = Math.max(60, Math.min(Y_MAX - 360, range * factor));
+    yMin = Math.round(Math.max(360, Y_MAX - newRange));
+  } else {
+    // X-axis zoom: scroll up = zoom in (fewer points), scroll down = zoom out
+    const agg = aggregate();
+    const total = agg.length;
+    const current = windowSize(total);
+    const factor = e.deltaY > 0 ? 1.08 : 0.93;
+    viewWindow = Math.max(3, Math.min(total, Math.round(current * factor)));
+  }
   renderChart();
 }, { passive: false });
 
@@ -634,7 +609,7 @@ function posCardTooltip(e) {
   el.addEventListener('mouseleave', () => { cardTooltip.style.display = 'none'; });
 });
 
-// ─── Table (3 columns: 직원 / 평균출근 / 연차) ──────────────
+// ─── Table (직원 / 연차 / 평균출근 / 출근편차) ──────────────
 function renderTable() {
   const empData = {};
   EMPLOYEES.forEach(e => empData[e] = { mins: [], leave: 0 });
@@ -655,10 +630,16 @@ function renderTable() {
     const devTxt = dev == null ? '—' : dev === 0 ? '0분' : dev < 0 ? `-${absDev}분` : `+${dev}분`;
     const devColor = dev != null && dev > 0 ? '#e85555' : COLORS[name];
     const barPct = Math.min(absDev / MAX_DEV * 50, 50);
+
+    // Inner end (touching center line) has radius 0; outer end rounded
     let barStyle;
-    if (dev != null && dev < 0) barStyle = `right:50%; left:auto; width:${barPct}%; background:${COLORS[name]};`;
-    else if (dev != null && dev > 0) barStyle = `left:50%; right:auto; width:${barPct}%; background:#e85555;`;
-    else barStyle = `left:50%; width:0;`;
+    if (dev != null && dev < 0) {
+      barStyle = `right:50%; left:auto; width:${barPct}%; background:${COLORS[name]}; border-radius:4px 0 0 4px;`;
+    } else if (dev != null && dev > 0) {
+      barStyle = `left:50%; right:auto; width:${barPct}%; background:#e85555; border-radius:0 4px 4px 0;`;
+    } else {
+      barStyle = `left:50%; width:0;`;
+    }
 
     const dots = Array.from({ length: TOTAL_LEAVE }, (_, i) =>
       `<div class="dot" style="${i < d.leave ? `background:${COLORS[name]}` : ''}"></div>`
@@ -667,72 +648,16 @@ function renderTable() {
     return `
       <div class="tbl-row">
         <div class="emp-name" style="color:${COLORS[name]}">${name}</div>
-        <div class="avg-time">${fmtMins(avgM)}</div>
         <div class="leave-wrap">
           <span class="leave-count" style="color:${COLORS[name]}">${d.leave}/${TOTAL_LEAVE}</span>
           <div class="leave-dots">${dots}</div>
         </div>
+        <div class="avg-time" style="color:${COLORS[name]}">${fmtMins(avgM)}</div>
         <div class="dev-wrap">
           <div class="dev-text">
             <div class="dev-delta" style="color:${devColor}">${devTxt}</div>
           </div>
           <div class="dev-track">
-            <div class="dev-center-line"></div>
-            <div class="dev-bar" style="${barStyle}"></div>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-// ─── Mobile Summary ───────────────────────────────────────
-function renderMobileSummary() {
-  const empData = {};
-  EMPLOYEES.forEach(e => empData[e] = { mins: [], leave: 0 });
-  allRecords.forEach(rec => {
-    rec.arrivals?.forEach(a => { const m = toMins(a.time); if (m!=null) empData[a.name]?.mins.push(m); });
-    rec.absences?.forEach(a => { if (a.type === '연차') empData[a.name].leave++; });
-  });
-  if (isDemo) { empData['강성준'].leave = 10; empData['이경희'].leave = 6; empData['임재우'].leave = 13; }
-
-  const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
-  const MAX_DEV = 120;
-
-  document.getElementById('mobile-summary').innerHTML = EMPLOYEES.map(name => {
-    const d = empData[name];
-    const avgM = avg(d.mins);
-    const dev = avgM != null ? Math.round(avgM - BASELINE) : null;
-    const absDev = dev != null ? Math.abs(dev) : 0;
-    const devTxt = dev == null ? '—' : dev === 0 ? '0분' : dev < 0 ? `-${absDev}분` : `+${dev}분`;
-    const devColor = dev != null && dev > 0 ? '#e85555' : COLORS[name];
-    const barPct = Math.min(absDev / MAX_DEV * 50, 50);
-
-    let barStyle;
-    if (dev != null && dev < 0) {
-      barStyle = `right:50%; left:auto; width:${barPct}%; background:${COLORS[name]};`;
-    } else if (dev != null && dev > 0) {
-      barStyle = `left:50%; right:auto; width:${barPct}%; background:#e85555;`;
-    } else {
-      barStyle = `left:50%; width:0;`;
-    }
-
-    return `
-      <div class="mob-row" style="border-top-color:${COLORS[name]}">
-        <div class="mob-name" style="color:${COLORS[name]}">${name}</div>
-        <div class="mob-stats">
-          <div>
-            <div class="mob-label">평균 출근</div>
-            <div class="mob-val">${fmtMins(avgM)}</div>
-          </div>
-          <div>
-            <div class="mob-label">연차 (병가 제외)</div>
-            <div class="mob-val" style="color:${COLORS[name]}">${d.leave}/${TOTAL_LEAVE}</div>
-          </div>
-        </div>
-        <div class="mob-label" style="margin-bottom:6px">출근 편차</div>
-        <div class="mob-dev-row">
-          <span class="mob-dev-text" style="color:${devColor}">${devTxt}</span>
-          <div class="mob-dev-track">
             <div class="dev-center-line"></div>
             <div class="dev-bar" style="${barStyle}"></div>
           </div>
@@ -749,6 +674,7 @@ document.getElementById('period-btns').addEventListener('click', e => {
   activePeriod = btn.dataset.period;
   viewOffset = 0;
   viewWindow = null;
+  yMin = 7 * 60;
   renderChart(); renderLegend();
 });
 
@@ -761,7 +687,7 @@ document.getElementById('emp-btns').addEventListener('click', e => {
 });
 
 // ─── Init ────────────────────────────────────────────────
-function renderAll() { renderMetrics(); renderLegend(); renderChart(); renderTable(); renderMobileSummary(); }
+function renderAll() { renderMetrics(); renderLegend(); renderChart(); renderTable(); }
 loadData();
 </script>
 </body>
