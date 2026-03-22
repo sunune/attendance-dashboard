@@ -66,8 +66,9 @@ jobs:
               with urllib.request.urlopen(req) as resp:
                   return json.loads(resp.read())
 
-          # Notion에서 오늘 날짜 행만 파싱
-          today_arrivals = []
+          # Notion 전체 데이터 파싱 (날짜별로 grouping)
+          from collections import defaultdict
+          date_arrivals = defaultdict(list)
           skipped = 0
           cursor  = None
 
@@ -82,13 +83,19 @@ jobs:
                   rt       = props.get('출근시간', {}).get('rich_text', [])
                   raw_time = rt[0]['text']['content'] if rt else None
 
-                  if date != TODAY:
+                  if not date:
+                      skipped += 1
+                      continue
+                  # 주말 제외
+                  from datetime import date as date_cls
+                  y, m, d = map(int, date.split('-'))
+                  if date_cls(y, m, d).weekday() >= 5:
                       continue
                   if not (name and raw_time):
                       skipped += 1
                       continue
                   try:
-                      today_arrivals.append({'name': name, 'time': parse_time(raw_time)})
+                      date_arrivals[date].append({'name': name, 'time': parse_time(raw_time)})
                   except Exception as e:
                       print(f'시간 파싱 실패: {raw_time!r} → {e}')
                       skipped += 1
@@ -98,23 +105,20 @@ jobs:
               else:
                   break
 
-          print(f'Notion 오늘 데이터: {len(today_arrivals)}행, 스킵: {skipped}')
+          print(f'Notion 전체 데이터: {sum(len(v) for v in date_arrivals.values())}행, 스킵: {skipped}')
 
-          # 기존 data.json 로드
+          # 기존 data.json 로드 후 전체 upsert
           try:
               with open('data.json', encoding='utf-8') as f:
                   existing = json.load(f)
           except Exception:
               existing = {'employees': EMPLOYEES, 'records': []}
 
-          # 오늘 레코드를 기존에 upsert (같은 날짜면 덮어쓰기)
           records_map = {r['date']: r for r in existing.get('records', [])}
 
-          if today_arrivals:
-              records_map[TODAY] = {'date': TODAY, 'arrivals': today_arrivals}
-              print(f'data.json에 {TODAY} 데이터 upsert 완료')
-          else:
-              print(f'오늘({TODAY}) Notion 데이터 없음 — data.json 유지')
+          for date, arrivals in date_arrivals.items():
+              records_map[date] = {'date': date, 'arrivals': arrivals}
+          print(f'총 {len(date_arrivals)}일 upsert 완료')
 
           output = {
               'employees':  EMPLOYEES,
