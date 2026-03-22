@@ -161,9 +161,8 @@ body {
 .avg-time { font-size: 14px; color: #2a2a3e; }
 
 /* ── Leave Dots ── */
-.leave-wrap { display: flex; align-items: center; gap: 10px; }
-.leave-count { font-size: 14px; font-weight: 700; min-width: 44px; }
-.leave-dots { display: flex; flex-wrap: wrap; gap: 4px; }
+.leave-wrap { display: flex; align-items: center; cursor: default; }
+.leave-dots { display: flex; flex-wrap: wrap; gap: 5px; }
 .dot {
   width: 11px;
   height: 11px;
@@ -171,8 +170,27 @@ body {
   background: #eeece8;
 }
 
+/* ── Table Row Tooltip ── */
+#tbl-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999;
+  display: none;
+  background: #fff;
+  border: 1px solid #e8e3da;
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.10);
+  font-size: 13px;
+  color: #1a1a2e;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.tbl-tt-count { font-size: 18px; font-weight: 700; }
+.tbl-tt-label { font-size: 11px; color: #9a9aaa; margin-top: 2px; }
+
 /* ── Deviation Bar ── */
-.dev-wrap { display: flex; align-items: center; gap: 14px; }
+.dev-wrap { display: flex; align-items: center; gap: 14px; cursor: default; }
 .dev-text { min-width: 56px; }
 .dev-delta { font-size: 13px; font-weight: 600; }
 .dev-track {
@@ -209,6 +227,9 @@ body {
 </style>
 </head>
 <body>
+
+<!-- Table Row Tooltip -->
+<div id="tbl-tooltip"></div>
 
 <!-- Card Tooltip -->
 <div id="card-tooltip">
@@ -664,12 +685,11 @@ function renderTable() {
     return `
       <div class="tbl-row">
         <div class="emp-name" style="color:${COLORS[name]}">${name}</div>
-        <div class="leave-wrap">
-          <span class="leave-count" style="color:${COLORS[name]}">${d.leave}/${TOTAL_LEAVE}</span>
+        <div class="leave-wrap" data-leave="${d.leave}" data-total="${TOTAL_LEAVE}" data-color="${COLORS[name]}">
           <div class="leave-dots">${dots}</div>
         </div>
         <div class="avg-time" style="color:${COLORS[name]}">${fmtMins(avgM)}</div>
-        <div class="dev-wrap">
+        <div class="dev-wrap" data-dev="${dev != null ? dev : ''}" data-color="${COLORS[name]}">
           <div class="dev-text">
             <div class="dev-delta" style="color:${devColor}">${devTxt}</div>
           </div>
@@ -681,6 +701,54 @@ function renderTable() {
       </div>`;
   }).join('');
 }
+
+// ─── Table Row Tooltips ───────────────────────────────────
+const tblTooltip = document.getElementById('tbl-tooltip');
+
+function posTblTooltip(e) {
+  const vpW = window.innerWidth, vpH = window.innerHeight;
+  const tw = tblTooltip.offsetWidth, th = tblTooltip.offsetHeight;
+  let x = e.clientX + 16, y = e.clientY - th / 2;
+  if (x + tw > vpW - 8) x = e.clientX - tw - 16;
+  if (y < 8) y = 8;
+  if (y + th > vpH - 8) y = vpH - th - 8;
+  tblTooltip.style.left = x + 'px';
+  tblTooltip.style.top  = y + 'px';
+}
+
+document.getElementById('tbl-body').addEventListener('mouseover', e => {
+  const leaveEl = e.target.closest('.leave-wrap');
+  const devEl   = e.target.closest('.dev-wrap');
+  if (leaveEl) {
+    const used  = leaveEl.dataset.leave;
+    const total = leaveEl.dataset.total;
+    const color = leaveEl.dataset.color;
+    tblTooltip.innerHTML =
+      `<div class="tbl-tt-count" style="color:${color}">${used} / ${total}</div>` +
+      `<div class="tbl-tt-label">병가 제외 연차 사용일수</div>`;
+    tblTooltip.style.display = 'block';
+  } else if (devEl && devEl.dataset.dev !== '') {
+    const dev    = parseInt(devEl.dataset.dev);
+    const absDev = Math.abs(dev);
+    const color  = dev > 0 ? '#e85555' : devEl.dataset.color;
+    let msg;
+    if (dev === 0)     msg = '09:30에 정시 출근하고 있습니다';
+    else if (dev < 0)  msg = `09:30 기준으로 <strong style="color:${color}">${absDev}분</strong> 일찍 출근하고 있습니다`;
+    else               msg = `09:30 기준으로 <strong style="color:${color}">${absDev}분</strong> 늦게 출근하고 있습니다`;
+    tblTooltip.innerHTML = msg;
+    tblTooltip.style.display = 'block';
+  } else {
+    tblTooltip.style.display = 'none';
+  }
+});
+
+document.getElementById('tbl-body').addEventListener('mousemove', e => {
+  if (tblTooltip.style.display !== 'none') posTblTooltip(e);
+});
+
+document.getElementById('tbl-body').addEventListener('mouseleave', () => {
+  tblTooltip.style.display = 'none';
+});
 
 // ─── Filter Events ────────────────────────────────────────
 document.getElementById('period-btns').addEventListener('click', e => {
