@@ -130,7 +130,7 @@ body {
 }
 #chart { display: block; user-select: none; }
 
-/* ── Summary Table (3 columns) ── */
+/* ── Summary Table (4 columns) ── */
 .summary-table {
   background: #fff;
   border-radius: 14px;
@@ -139,7 +139,7 @@ body {
 }
 .tbl-header {
   display: grid;
-  grid-template-columns: 130px 130px 1fr;
+  grid-template-columns: 130px 130px 200px 1fr;
   padding: 12px 28px;
   font-size: 12px;
   color: #9a9aaa;
@@ -149,7 +149,7 @@ body {
 }
 .tbl-row {
   display: grid;
-  grid-template-columns: 130px 130px 1fr;
+  grid-template-columns: 130px 130px 200px 1fr;
   padding: 20px 28px;
   border-bottom: 1px solid #f2ede6;
   gap: 12px;
@@ -169,6 +169,11 @@ body {
   border-radius: 50%;
   background: #ddd8d0;
 }
+
+/* ── Deviation Bar (table + mobile) ── */
+.dev-wrap { display: flex; align-items: center; gap: 14px; }
+.dev-text { min-width: 56px; }
+.dev-delta { font-size: 13px; font-weight: 600; }
 
 /* ── Deviation Bar (shared: table + mobile) ── */
 .dev-track {
@@ -235,7 +240,7 @@ body {
   body { padding: 20px 16px; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .tbl-header, .tbl-row {
-    grid-template-columns: 90px 90px 1fr;
+    grid-template-columns: 80px 100px 140px 1fr;
     font-size: 12px;
   }
   .mobile-summary { display: block; }
@@ -311,6 +316,7 @@ body {
     <span>직원</span>
     <span>평균 출근</span>
     <span>연차 (병가 제외)</span>
+    <span>출근 편차</span>
   </div>
   <div id="tbl-body"></div>
 </div>
@@ -639,10 +645,20 @@ function renderTable() {
   if (isDemo) { empData['강성준'].leave = 10; empData['이경희'].leave = 6; empData['임재우'].leave = 13; }
 
   const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+  const MAX_DEV = 120;
 
   document.getElementById('tbl-body').innerHTML = EMPLOYEES.map(name => {
     const d = empData[name];
     const avgM = avg(d.mins);
+    const dev  = avgM != null ? Math.round(avgM - BASELINE) : null;
+    const absDev = dev != null ? Math.abs(dev) : 0;
+    const devTxt = dev == null ? '—' : dev === 0 ? '0분' : dev < 0 ? `-${absDev}분` : `+${dev}분`;
+    const devColor = dev != null && dev > 0 ? '#e85555' : COLORS[name];
+    const barPct = Math.min(absDev / MAX_DEV * 50, 50);
+    let barStyle;
+    if (dev != null && dev < 0) barStyle = `right:50%; left:auto; width:${barPct}%; background:${COLORS[name]};`;
+    else if (dev != null && dev > 0) barStyle = `left:50%; right:auto; width:${barPct}%; background:#e85555;`;
+    else barStyle = `left:50%; width:0;`;
 
     const dots = Array.from({ length: TOTAL_LEAVE }, (_, i) =>
       `<div class="dot" style="${i < d.leave ? `background:${COLORS[name]}` : ''}"></div>`
@@ -655,6 +671,15 @@ function renderTable() {
         <div class="leave-wrap">
           <span class="leave-count" style="color:${COLORS[name]}">${d.leave}/${TOTAL_LEAVE}</span>
           <div class="leave-dots">${dots}</div>
+        </div>
+        <div class="dev-wrap">
+          <div class="dev-text">
+            <div class="dev-delta" style="color:${devColor}">${devTxt}</div>
+          </div>
+          <div class="dev-track">
+            <div class="dev-center-line"></div>
+            <div class="dev-bar" style="${barStyle}"></div>
+          </div>
         </div>
       </div>`;
   }).join('');
