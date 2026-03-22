@@ -140,7 +140,7 @@ body {
 }
 .tbl-header {
   display: grid;
-  grid-template-columns: 130px 130px 1fr 1fr;
+  grid-template-columns: 1fr 4fr 1fr 4fr;
   padding: 12px 28px;
   font-size: 12px;
   color: #9a9aaa;
@@ -150,7 +150,7 @@ body {
 }
 .tbl-row {
   display: grid;
-  grid-template-columns: 130px 130px 1fr 1fr;
+  grid-template-columns: 1fr 4fr 1fr 4fr;
   padding: 20px 28px;
   border-bottom: 1px solid #f2ede6;
   gap: 12px;
@@ -168,7 +168,7 @@ body {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: #ddd8d0;
+  background: #eeece8;
 }
 
 /* ── Deviation Bar ── */
@@ -181,7 +181,7 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  background: #ddd8d0;
+  background: #eeece8;
   border-radius: 4px;
 }
 .dev-center-line {
@@ -202,7 +202,7 @@ body {
   body { padding: 20px 16px; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .tbl-header, .tbl-row {
-    grid-template-columns: 80px 120px 140px 1fr;
+    grid-template-columns: 1fr 4fr 1fr 4fr;
     font-size: 12px;
   }
 }
@@ -331,6 +331,18 @@ function getWeekNum(dateStr) {
   const jan1 = new Date(d.getFullYear(), 0, 1);
   return Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
 }
+function computeYMax() {
+  let maxMins = 0;
+  allRecords.forEach(rec => {
+    rec.arrivals?.forEach(a => {
+      const m = toMins(a.time);
+      if (m != null && m > maxMins) maxMins = m;
+    });
+  });
+  if (maxMins === 0) return 14 * 60; // fallback
+  // latest hour + 1, e.g. latest 13:47 → yMax 14:00; latest 13:00 → yMax 14:00
+  return (Math.floor(maxMins / 60) + 1) * 60;
+}
 
 // ─── State ───────────────────────────────────────────────
 let allRecords   = makeDemoRecords();
@@ -340,8 +352,8 @@ let activeEmp    = 'all';
 let viewOffset   = 0;
 let viewWindow   = null; // null = use default window size
 let chartInst    = null;
-const Y_MAX = 15 * 60;  // 15:00 fixed ceiling
-let yMin = 7 * 60;      // 07:00 default floor (adjustable via Y-wheel)
+let yMin = 7 * 60;   // 07:00 default floor (adjustable via Y-wheel)
+let yMaxCache = 0;   // computed from data on each renderChart()
 
 // ─── Load Data ───────────────────────────────────────────
 async function loadData() {
@@ -491,10 +503,10 @@ function createChart(slice) {
         },
         y: {
           grid: { color: '#f0ebe3' },
-          min: yMin, max: Y_MAX,
+          min: yMin, max: yMaxCache,
           ticks: {
             color: '#bbb', font: { size: 11 },
-            stepSize: (Y_MAX - yMin) <= 120 ? 10 : (Y_MAX - yMin) <= 300 ? 20 : 30,
+            stepSize: 60,
             callback: v => fmtMins(v)
           }
         }
@@ -504,6 +516,9 @@ function createChart(slice) {
 }
 
 function renderChart() {
+  yMaxCache = computeYMax();
+  // ensure yMin doesn't exceed yMax - 60
+  yMin = Math.min(yMin, yMaxCache - 60);
   const agg   = aggregate();
   const slice = getSlice(agg);
   createChart(slice);
@@ -516,10 +531,11 @@ document.getElementById('chart').addEventListener('wheel', e => {
 
   if (inYAxis) {
     // Y-axis zoom: scroll up = zoom in (narrow range), scroll down = zoom out (wider range)
-    const range = Y_MAX - yMin;
+    const yMax = yMaxCache || computeYMax();
+    const range = yMax - yMin;
     const factor = e.deltaY > 0 ? 1.08 : 0.92;
-    const newRange = Math.max(60, Math.min(Y_MAX - 360, range * factor));
-    yMin = Math.round(Math.max(360, Y_MAX - newRange));
+    const newRange = Math.max(60, Math.min(yMax - 360, range * factor));
+    yMin = Math.round(Math.max(360, yMax - newRange));
   } else {
     // X-axis zoom: scroll up = zoom in (fewer points), scroll down = zoom out
     const agg = aggregate();
