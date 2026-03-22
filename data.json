@@ -1,6 +1,29 @@
 {
-  "employees": ["강성준", "이경희", "임재우"],
-  "records": [],
-  "updated_at": "2026-03-22T00:00:00Z",
-  "note": "GitHub Actions가 매일 KST 09:00에 Notion에서 자동 업데이트합니다."
+  "employees": [
+    "강성준",
+    "이경희",
+    "임재우"
+  ],
+  "records": [
+    {
+      "date": "2026-03-20",
+      "arrivals": [
+        {
+          "name": "임재우",
+          "time": "10:00"
+        },
+        {
+          "name": "강성준",
+          "time": "08:00"
+        },
+        {
+          "name": "이경희",
+          "time": "11:40"
+        }
+      ]
+    }
+  ],
+  "updated_at": "2026-03-22T10:06:26Z",
+  "total_rows": 3,
+  "skipped": 0
 }
