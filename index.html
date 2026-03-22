@@ -333,28 +333,6 @@ const COLORS    = { '강성준': '#3266ad', '이경희': '#D85A30', '임재우':
 const BASELINE  = 9 * 60 + 30; // 09:30 in minutes
 const TOTAL_LEAVE = 15;
 
-// ─── Demo Data ───────────────────────────────────────────
-function makeDemoRecords() {
-  const base = { '강성준': 7*60+58, '이경희': 9*60+30, '임재우': 9*60+15 };
-  const vari = { '강성준': 18,       '이경희': 18,       '임재우': 20       };
-  const records = [];
-  const end = new Date('2026-03-22');
-  const start = new Date('2026-01-01');
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dow = d.getDay();
-    if (dow === 0 || dow === 6) continue;
-    const dateStr = d.toISOString().split('T')[0];
-    const arrivals = EMPLOYEES.map(name => {
-      if (Math.random() < 0.04) return null;
-      const mins = base[name] + Math.round((Math.random() - 0.5) * vari[name] * 2);
-      const h = Math.floor(mins / 60), m = ((mins % 60) + 60) % 60;
-      return { name, time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}` };
-    }).filter(Boolean);
-    if (arrivals.length) records.push({ date: dateStr, arrivals });
-  }
-  return records;
-}
-
 // ─── Helpers ─────────────────────────────────────────────
 function toMins(t) {
   if (!t) return null;
@@ -387,8 +365,7 @@ function computeYMax() {
 }
 
 // ─── State ───────────────────────────────────────────────
-let allRecords   = makeDemoRecords();
-let isDemo       = true;
+let allRecords   = [];
 let activePeriod = 'week';
 let activeEmp    = 'all';
 let viewOffset   = 0;
@@ -403,10 +380,7 @@ async function loadData() {
     const r = await fetch('./data.json?' + Date.now());
     if (r.ok) {
       const d = await r.json();
-      if (d.records && d.records.length > 0) {
-        allRecords = d.records;
-        isDemo = false;
-      }
+      if (d.records) allRecords = d.records;
     }
   } catch(e) {}
   renderAll();
@@ -677,8 +651,6 @@ function renderTable() {
     rec.arrivals?.forEach(a => { const m = toMins(a.time); if (m!=null) empData[a.name]?.mins.push(m); });
     rec.absences?.forEach(a => { if (a.type === '연차') empData[a.name].leave++; });
   });
-  if (isDemo) { empData['강성준'].leave = 10; empData['이경희'].leave = 6; empData['임재우'].leave = 13; }
-
   const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
   const MAX_DEV = 120;
 
