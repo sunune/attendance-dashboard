@@ -68,7 +68,7 @@ body {
   top: -3px;
   background: #ccc;
 }
-.tt-bar { position: absolute; height: 8px; border-radius: 4px; transition: none; }
+.tt-bar { position: absolute; height: 8px; transition: none; }
 .tt-delta { font-size: 15px; font-weight: 700; }
 
 /* ── Filter Row ── */
@@ -630,13 +630,15 @@ function showCardTooltip(e, cardId) {
 
   const bar = document.getElementById('tt-bar');
   if (dev < 0) {
-    bar.style.right = '50%';
-    bar.style.left  = 'auto';
-    bar.style.width = pct + '%';
+    bar.style.right        = '50%';
+    bar.style.left         = 'auto';
+    bar.style.width        = pct + '%';
+    bar.style.borderRadius = '4px 0 0 4px';
   } else {
-    bar.style.left  = '50%';
-    bar.style.right = 'auto';
-    bar.style.width = pct + '%';
+    bar.style.left         = '50%';
+    bar.style.right        = 'auto';
+    bar.style.width        = pct + '%';
+    bar.style.borderRadius = '0 4px 4px 0';
   }
   bar.style.background = barColor;
 
