@@ -151,17 +151,32 @@ body {
 .tbl-row {
   display: grid;
   grid-template-columns: 1fr 4fr 1fr 4fr;
-  padding: 20px 28px;
+  padding: 0 28px;
   border-bottom: 1px solid #f2ede6;
   gap: 12px;
-  align-items: center;
+  align-items: stretch;
+  min-height: 72px;
 }
 .tbl-row:last-child { border-bottom: none; }
-.emp-name { font-size: 15px; font-weight: 600; }
-.avg-time { font-size: 14px; color: #2a2a3e; }
+.emp-name {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+.avg-time {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
 
 /* ── Leave Dots ── */
-.leave-wrap { display: flex; align-items: center; cursor: default; }
+.leave-wrap {
+  display: flex;
+  align-items: center;
+  cursor: default;
+  padding: 20px 0;
+}
 .leave-dots { display: flex; flex-wrap: wrap; gap: 5px; }
 .dot {
   width: 11px;
@@ -190,7 +205,13 @@ body {
 .tbl-tt-label { font-size: 11px; color: #9a9aaa; margin-top: 2px; }
 
 /* ── Deviation Bar ── */
-.dev-wrap { display: flex; align-items: center; gap: 14px; cursor: default; }
+.dev-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: default;
+  padding: 20px 0;
+}
 .dev-text { min-width: 56px; }
 .dev-delta { font-size: 13px; font-weight: 600; }
 .dev-track {
@@ -233,7 +254,7 @@ body {
 
 <!-- Card Tooltip -->
 <div id="card-tooltip">
-  <div class="tt-title">출근 편차</div>
+  <div class="tt-title">편차</div>
   <div class="tt-track">
     <div class="tt-center"></div>
     <div class="tt-bar" id="tt-bar"></div>
@@ -300,7 +321,7 @@ body {
     <span>직원</span>
     <span>연차 (병가 제외)</span>
     <span>평균 출근</span>
-    <span>출근 편차</span>
+    <span>편차</span>
   </div>
   <div id="tbl-body"></div>
 </div>
@@ -732,9 +753,9 @@ document.getElementById('tbl-body').addEventListener('mouseover', e => {
     const absDev = Math.abs(dev);
     const color  = dev > 0 ? '#e85555' : devEl.dataset.color;
     let msg;
-    if (dev === 0)     msg = '09:30에 정시 출근하고 있습니다';
-    else if (dev < 0)  msg = `09:30 기준으로 <strong style="color:${color}">${absDev}분</strong> 일찍 출근하고 있습니다`;
-    else               msg = `09:30 기준으로 <strong style="color:${color}">${absDev}분</strong> 늦게 출근하고 있습니다`;
+    if (dev === 0)     msg = '09:30에 평균 정시 출근하고 있습니다';
+    else if (dev < 0)  msg = `09:30 기준으로 평균 <strong style="color:${color}">${absDev}분</strong> 일찍 출근하고 있습니다`;
+    else               msg = `09:30 기준으로 평균 <strong style="color:${color}">${absDev}분</strong> 늦게 출근하고 있습니다`;
     tblTooltip.innerHTML = msg;
     tblTooltip.style.display = 'block';
   } else {
