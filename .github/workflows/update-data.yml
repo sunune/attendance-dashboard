@@ -15,23 +15,27 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch Notion data & generate data.json
+      - name: Fetch today's Notion data & append to data.json
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: |
           python3 << 'PYEOF'
           import json, urllib.request, os
+          from datetime import datetime, timezone, timedelta
 
-          TOKEN = os.environ['NOTION_TOKEN']
-          DB_ID = '672112f596f74ce8979687ebfd0438fc'
+          TOKEN     = os.environ['NOTION_TOKEN']
+          DB_ID     = '672112f596f74ce8979687ebfd0438fc'
           EMPLOYEES = ['강성준', '이경희', '임재우']
 
+          # KST 오늘 날짜
+          KST   = timezone(timedelta(hours=9))
+          TODAY = datetime.now(KST).strftime('%Y-%m-%d')
+          print(f'오늘 날짜 (KST): {TODAY}')
+
           def parse_time(s):
-              """'AM 08:00' / 'PM 01:30' → '08:00' / '13:30'"""
               parts = s.strip().split()
-              ampm = parts[0].upper()
-              hm   = parts[1].split(':')
-              h, m = int(hm[0]), int(hm[1])
+              ampm  = parts[0].upper()
+              h, m  = map(int, parts[1].split(':'))
               if ampm == 'PM' and h != 12:
                   h += 12
               elif ampm == 'AM' and h == 12:
@@ -56,69 +60,66 @@ jobs:
               with urllib.request.urlopen(req) as resp:
                   return json.loads(resp.read())
 
-          # 페이지네이션으로 전체 결과 수집
-          all_results = []
-          cursor = None
+          # Notion에서 오늘 날짜 행만 파싱
+          today_arrivals = []
+          skipped = 0
+          cursor  = None
+
           while True:
               data = notion_query(cursor)
-              all_results.extend(data.get('results', []))
+              for result in data.get('results', []):
+                  props    = result.get('properties', {})
+                  name_sel = props.get('이름', {}).get('select') or {}
+                  name     = name_sel.get('name')
+                  date_obj = props.get('날짜', {}).get('date') or {}
+                  date     = date_obj.get('start', '')[:10]
+                  rt       = props.get('출근시간', {}).get('rich_text', [])
+                  raw_time = rt[0]['text']['content'] if rt else None
+
+                  if date != TODAY:
+                      continue
+                  if not (name and raw_time):
+                      skipped += 1
+                      continue
+                  try:
+                      today_arrivals.append({'name': name, 'time': parse_time(raw_time)})
+                  except Exception as e:
+                      print(f'시간 파싱 실패: {raw_time!r} → {e}')
+                      skipped += 1
+
               if data.get('has_more'):
                   cursor = data.get('next_cursor')
               else:
                   break
 
-          # 날짜별로 그룹화
-          records_map = {}
-          skipped = 0
+          print(f'Notion 오늘 데이터: {len(today_arrivals)}행, 스킵: {skipped}')
 
-          for result in all_results:
-              props = result.get('properties', {})
+          # 기존 data.json 로드
+          try:
+              with open('data.json', encoding='utf-8') as f:
+                  existing = json.load(f)
+          except Exception:
+              existing = {'employees': EMPLOYEES, 'records': []}
 
-              # 이름
-              name_sel = props.get('이름', {}).get('select') or {}
-              name = name_sel.get('name')
+          # 오늘 레코드를 기존에 upsert (같은 날짜면 덮어쓰기)
+          records_map = {r['date']: r for r in existing.get('records', [])}
 
-              # 날짜
-              date_obj = props.get('날짜', {}).get('date') or {}
-              date = date_obj.get('start', '')[:10]  # YYYY-MM-DD
-
-              # 출근시간
-              rt = props.get('출근시간', {}).get('rich_text', [])
-              raw_time = rt[0]['text']['content'] if rt else None
-
-              if not (name and date and raw_time):
-                  skipped += 1
-                  continue
-
-              try:
-                  time_24 = parse_time(raw_time)
-              except Exception as e:
-                  print(f'시간 파싱 실패: {raw_time!r} → {e}')
-                  skipped += 1
-                  continue
-
-              if date not in records_map:
-                  records_map[date] = {'date': date, 'arrivals': []}
-
-              # 같은 날 같은 직원 중복 방지
-              existing_names = {a['name'] for a in records_map[date]['arrivals']}
-              if name not in existing_names:
-                  records_map[date]['arrivals'].append({'name': name, 'time': time_24})
-
-          records = sorted(records_map.values(), key=lambda r: r['date'])
+          if today_arrivals:
+              records_map[TODAY] = {'date': TODAY, 'arrivals': today_arrivals}
+              print(f'data.json에 {TODAY} 데이터 upsert 완료')
+          else:
+              print(f'오늘({TODAY}) Notion 데이터 없음 — data.json 유지')
 
           output = {
-              'employees': EMPLOYEES,
-              'records':   records,
-              'updated_at': __import__('datetime').datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
-              'total_rows': len(all_results),
-              'skipped':    skipped,
+              'employees':  EMPLOYEES,
+              'records':    sorted(records_map.values(), key=lambda r: r['date']),
+              'updated_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
           }
 
           with open('data.json', 'w', encoding='utf-8') as f:
               json.dump(output, f, ensure_ascii=False, indent=2)
 
-          print(f'✅ data.json 생성 완료: {len(records)}일 기록, {len(all_results)}행 처리, {skipped}행 스킵')
+          print(f'✅ data.json 저장 완료: 총 {len(output["records"])}일 기록')
           PYEOF
 
       - name: Commit & push data.json
